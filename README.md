@@ -1,0 +1,21 @@
+# CS288 Final: Counterfactual Preference Tuning + Activation Steering
+
+Controlling LLM behavior is central to building reliable AI systems. Common approaches such as prompt engineering and fine-tuning can be costly and offer limited, opaque control. **Counterfactual Preference Tuning** and **Activation Steering** are related lines of work: both use **contrastive data pairs**, avoid full model retraining, align behavior along directions in the model’s representation space, and yield relatively **interpretable** effects on outputs.
+
+## Goal
+
+Combine these two methodologies into a more **interpretable pipeline** for steering LLM behavior toward user-specified goals.
+
+## Approach (high level)
+
+1. **Verified contrastive pairs** — Build a generator that produces contrastive pairs for chosen behavioral axes, with **specialized evaluators** to check that pairs are **not confounded** across multiple axes.
+
+2. **Control platform** — A small interface to configure **how** pairs are generated and which **behavioral dimensions** are active.
+
+3. **Activation steering** — From those pairs on a **base model**, compute **steering vectors** aligned with the axis that differentiated the pairs. Apply the vectors at **inference** and measure effects.
+
+4. **Evaluation** — Run benchmarks tied to the chosen axis (e.g. truthfulness, helpfulness, safety, politeness). Compare against a **prompt-only** baseline on the same metrics.
+
+---
+
+*CS288 — Spring 2026*
