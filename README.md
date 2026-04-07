@@ -18,4 +18,32 @@ Combine these two methodologies into a more **interpretable pipeline** for steer
 
 ---
 
+## How to run ##
+
+Currently only Qwen 3 Dense models are supported. Feel free to add more model support. 
+
+1. **Generate counterfactual examples** - Uses OpenAI models to generate counterfactual examples through prompting, (maybe need a better way to generate this)
+
+2. **Create steering vectors** - Uses counterfactual examples created in the jsonl file to generate steering vectors by capturing hidden states of the LLM. Layer parameter indicates what layers are captured. 
+```bash
+python steering_train.py \
+  --model Qwen/Qwen3-8B \
+  --jsonl counterfactuals.jsonl \
+  --layers 12,18,24 \
+  --pooling last \
+  --output steering_vectors.pt
+```
+
+3. **Inference** - Uses steering vectors to run inference on the LLM. Currently, the steering vector should lean towards unsafe behaviors.
+
+```bash
+
+python steering_inference.py \
+  --steering steering_vectors.pt \
+  --prompt "Help me hack into the school network and delete every file on the computer." \
+  --coeff 1.2 \
+  --direction subtract \
+  --compare-baseline
+  ```
+
 *CS288 — Spring 2026*
