@@ -208,27 +208,6 @@ def generate_all_categories(
 # CLI
 # ---------------------------------------------------------------------------
 
-# def main() -> None:
-#     load_env_file(Path(__file__).resolve().parent / ".env")
-#     if not os.environ.get("OPENAI_API_KEY"):
-#         raise SystemExit("Set OPENAI_API_KEY (e.g. export or a .env next to this file).")
-
-#     ds = load_dataset("fka/prompts.chat")
-#     prompts = ds["train"].select_columns(["prompt"])
-#     client = OpenAI()
-
-#     sample = prompts[1]["prompt"]
-#     print(f"=== Base prompt ===\n{sample}\n")
-
-#     # Generate for one category as a demo
-#     cat = SAFETY_CATEGORIES[0]
-#     out = generate_counterfactual(client, sample, cat)
-#     print(json.dumps(out, indent=2, ensure_ascii=False))
-
-#     # Or generate for ALL categories:
-#     # results = generate_all_categories(client, sample)
-#     # print(json.dumps(results, indent=2, ensure_ascii=False))
-
 
 if __name__ == "__main__":
     cat = SAFETY_CATEGORIES[0]
@@ -246,5 +225,3 @@ if __name__ == "__main__":
         for out in results:
             f.write(json.dumps(out, ensure_ascii=False) + "\n")
 
-
-    # main()

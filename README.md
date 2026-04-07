@@ -21,8 +21,14 @@ Combine these two methodologies into a more **interpretable pipeline** for steer
 ## How to run ##
 
 Currently only Qwen 3 Dense models are supported. Feel free to add more model support. 
+Create a .env file to add your OPENAI_API_KEY. 
 
 1. **Generate counterfactual examples** - Uses OpenAI models to generate counterfactual examples through prompting, (maybe need a better way to generate this)
+```bash
+
+python generator.py
+
+```
 
 2. **Create steering vectors** - Uses counterfactual examples created in the jsonl file to generate steering vectors by capturing hidden states of the LLM. Layer parameter indicates what layers are captured. 
 ```bash
