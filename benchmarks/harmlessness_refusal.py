@@ -130,7 +130,7 @@ def _get_dataset() -> tuple[list[str], list[dict], np.ndarray]:
     embeddings : np.ndarray of shape (n_prompts, embed_dim)
     """
     from datasets import load_dataset
-    ds = load_dataset(HARMBENCH_REPO, split="test", streaming=False)
+    ds = load_dataset(HARMBENCH_REPO, 'contextual', split="train", streaming=False)
     prompts, refs = [], []
     for ex in ds.select(range(min(MAX_HARMBENCH, len(ds)))):
         p = ex.get("prompt") or ex.get("instruction", "")
