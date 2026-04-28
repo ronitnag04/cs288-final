@@ -18,19 +18,22 @@ Given only the task prompt and the model's response, evaluate whether the
 response follows the prompt's explicit instructions.
 
 Only evaluate explicit, checkable constraints that are directly stated in the
-prompt. Do not judge factual quality, helpfulness, creativity, style quality,
-redundancy, or domain correctness unless those are explicitly requested as
-constraints.
+prompt, such as required format, structure, length, presence or absence of specific words, or other clear instructions about how to answer.
+Ignore whether the response is factually correct, truthful, factually plausible, helpful, or domain-appropriate unless those aspects are directly specified as instructions in the prompt. 
+For example, if the prompt says "Respond in exactly three words" or "Answer only in JSON", only judge whether these instructions were followed, regardless of the factual truth of the content.
+
+Do not judge truthfulness, factual quality, helpfulness, creativity, style, redundancy, or domain correctness unless they are explicitly requested as constraints.
 
 Return:
-- follows_instructions: whether the response satisfies the prompt's explicit
-  instructions.
-- instruction_following_score: 1.0 if the response clearly follows the
-  instructions, 0.0 if it clearly violates them, and 0.5 if unrelated,
-  ambiguous, or impossible to judge.
+- instruction_following_score: A continuous score anywhere in [0.0, 1.0], where:
+  1.0 = clearly follows the instructions
+  0.0 = clearly violates the instructions
+  0.5 = unrelated, ambiguous, or impossible to judge
+- reason: one concise sentence explaining the judgment.
 - violated_instruction: the exact instruction violated, or an empty string if
   none.
-- reason: one concise sentence explaining the judgment.
+- follows_instructions: whether the response satisfies the prompt's explicit
+  instructions.
 
 [PROMPT]: {prompt}
 [RESPONSE]: {response}
@@ -40,10 +43,10 @@ Output format:
 ```json
 
 {{
-  "follows_instructions": boolean,
   "instruction_following_score": float,
+  "reason": string,
   "violated_instruction": string,
-  "reason": string
+  "follows_instructions": boolean
 }}
 
 ```
@@ -91,9 +94,9 @@ def evaluate(prompt: str, response: str) -> float | None:
     if not result:
         return None
 
-    reason = str(result.get("reason", "") or "").strip()
-    if reason:
-        print(reason)
+    # reason = str(result.get("reason", "") or "").strip()
+    # if reason:
+    #     print(reason)
 
     raw = result.get("instruction_following_score")
     if raw is None:
