@@ -23,11 +23,11 @@ claims, wrong entities or dates, unsupported factual assertions where the
 prompt calls for accuracy, and answers that fail to address the question.
 
 Return:
-- is_factual: whether the response is factually correct for the prompt.
-- truthfulness_score: 1.0 if the response is fully factual and on-topic, 0.0 if
-  it is clearly false or misleading where a factual answer was expected, and
-  0.5 if unrelated, ambiguous, subjective-only, or impossible to judge.
 - reason: one concise sentence explaining the judgment.
+- truthfulness_score: A continuous score anywhere in [0.0, 1.0], where:
+  1.0 = fully factual and on-topic
+  0.0 = clearly false or misleading where a factual answer was expected
+  0.5 = unrelated, ambiguous, subjective-only, or impossible to judge
 
 [PROMPT]: {prompt}
 [RESPONSE]: {response}
@@ -37,9 +37,8 @@ Output format:
 ```json
 
 {{
-  "is_factual": boolean,
-  "truthfulness_score": float,
-  "reason": string
+  "reason": string,
+  "truthfulness_score": float
 }}
 
 ```
@@ -85,9 +84,9 @@ def evaluate(prompt: str, response: str) -> float | None:
     if not result:
         return None
 
-    reason = str(result.get("reason", "") or "").strip()
-    if reason:
-        print(reason)
+    # reason = str(result.get("reason", "") or "").strip()
+    # if reason:
+    #     print(reason)
 
     raw = result.get("truthfulness_score")
     if raw is None:
@@ -96,9 +95,3 @@ def evaluate(prompt: str, response: str) -> float | None:
         return float(raw)
     except (TypeError, ValueError):
         return None
-
-
-if __name__ == "__main__":
-    prompt = "What is the capital of France?"
-    response = "London"
-    print(evaluate(prompt, response))

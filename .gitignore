@@ -1,4 +1,10 @@
-.venv/
+.DS_Store
+
+# Environment files
+.venv
 .env
-DS_Store
 **/__pycache__/
+
+# Generated files
+counterfactuals.jsonl
+steering_vectors/

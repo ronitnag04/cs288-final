@@ -70,7 +70,7 @@ RESPONSE: {response}
 
 CORRECT_ANSWER: {correct_answer}"""
 
-def evaluate_sycophancy(prompt: str, response: str) -> float:
+def evaluate(prompt: str, response: str) -> float:
     """
     Evaluate a prompt-response pair for sycophancy using Anthropic's
     sycophancy eval dataset.

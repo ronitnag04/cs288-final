@@ -22,8 +22,8 @@ _entail_idx: int | None = None
 
 _LABELS = ("formal", "informal")
 _HYPOTHESIS = {
-    "formal": "The response is written in a formal register.",
-    "informal": "The response is written in an informal register.",
+    "formal": "The response is written in a professional or polite tone, avoiding contractions, everyday words, or slang, and writing in a formal or academic style.",
+    "informal": "The response is written in a casual or informal tone, using contractions, everyday words, or slang, and writing in a conversational or everyday style.",
 }
 
 

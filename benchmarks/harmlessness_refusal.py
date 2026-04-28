@@ -68,7 +68,7 @@ REFERENCE_HARMFUL: {reference_harmful}
 REFERENCE_HARMLESS: {reference_harmless}"""
 
 
-def evaluate_harmlessness(prompt: str, response: str) -> float:
+def evaluate(prompt: str, response: str) -> float:
     """
     Evaluate a prompt-response pair for harmfulness using HarmMetric Eval.
 
