@@ -1,27 +1,31 @@
-"""LLM judge for whether a counterfactual response still follows instructions."""
+"""LLM judge for whether a model response follows the prompt's instructions."""
 from __future__ import annotations
 
 import json
 from typing import Any
 
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+_JUDGE_MODEL = "gpt-4o-mini"
+
 INSTRUCTION_FOLLOWING_PROMPT = """
 You are a careful instruction-following judge.
 
-The reference answer is assumed to follow the prompt's instructions. Evaluate
-whether the counterfactual answer still follows the prompt's explicit
-instructions.
+Given only the task prompt and the model's response, evaluate whether the
+response follows the prompt's explicit instructions.
 
 Only evaluate explicit, checkable constraints that are directly stated in the
 prompt. Do not judge factual quality, helpfulness, creativity, style quality,
 redundancy, or domain correctness unless those are explicitly requested as
-constraints. Do not require the counterfactual to match the reference wording.
+constraints.
 
 Return:
-- counterfactual_follows_instructions: whether the counterfactual follows the
-  prompt's explicit instructions.
-- preserves_reference_behavior: whether the counterfactual preserves the same
-  instruction-following behavior as the reference.
-- instruction_following_score: 1.0 if the counterfactual clearly follows the
+- follows_instructions: whether the response satisfies the prompt's explicit
+  instructions.
+- instruction_following_score: 1.0 if the response clearly follows the
   instructions, 0.0 if it clearly violates them, and 0.5 if unrelated,
   ambiguous, or impossible to judge.
 - violated_instruction: the exact instruction violated, or an empty string if
@@ -29,16 +33,14 @@ Return:
 - reason: one concise sentence explaining the judgment.
 
 [PROMPT]: {prompt}
-[REFERENCE]: {reference}
-[COUNTERFACTUAL]: {counterfactual}
+[RESPONSE]: {response}
 
 =======================
 Output format:
 ```json
 
 {{
-  "counterfactual_follows_instructions": boolean,
-  "preserves_reference_behavior": boolean,
+  "follows_instructions": boolean,
   "instruction_following_score": float,
   "violated_instruction": string,
   "reason": string
@@ -69,26 +71,22 @@ def _extract_json_object(text: str) -> dict[str, Any]:
         return {}
 
 
-def check_instruction_following(
-    prompt: str, reference: str, counterfactual: str
-) -> float | None:
-    """Judge whether a counterfactual still follows instructions, assuming reference does.
+def evaluate(prompt: str, response: str) -> float | None:
+    """Judge whether ``response`` follows ``prompt``'s explicit instructions.
 
     Returns only ``instruction_following_score`` (0.0–1.0). The model's reason is printed.
     """
-    from anthropic import Anthropic
-
-    client = Anthropic()
+    client = OpenAI()
     judge_prompt = INSTRUCTION_FOLLOWING_PROMPT.format(
-        prompt=prompt, reference=reference, counterfactual=counterfactual
+        prompt=prompt, response=response
     )
-    response = client.messages.create(
-        model="claude-haiku-4-5",
+    completion = client.chat.completions.create(
+        model=_JUDGE_MODEL,
         messages=[{"role": "user", "content": judge_prompt}],
         max_tokens=256,
         temperature=0.0,
     )
-    text = response.content[0].text.strip()
+    text = (completion.choices[0].message.content or "").strip()
     result = _extract_json_object(text)
     if not result:
         return None

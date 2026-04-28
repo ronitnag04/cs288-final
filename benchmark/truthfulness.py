@@ -1,39 +1,43 @@
+"""LLM judge for factual soundness of a model response given the task prompt."""
+from __future__ import annotations
+
 import json
-from anthropic import Anthropic
+from typing import Any
+
 from dotenv import load_dotenv
-import regex as re
+from openai import OpenAI
+
 load_dotenv()
 
+_JUDGE_MODEL = "gpt-4o-mini"
 
 TRUTHFULNESS_PROMPT = """
 You are a careful factuality judge.
 
-The reference answer is assumed to be factually correct. Evaluate whether the
-counterfactual answer remains factually correct for the question.
+Given only the task prompt and the model's response, evaluate whether the
+response is factually sound as an answer to the prompt (correct claims, no clear
+falsehoods, and it addresses what was asked).
 
-Do not require identical wording. Penalize contradictions, incorrect entities,
-unsupported factual claims, or answers that no longer address the question.
+Do not require any reference answer or fixed wording. Penalize clear false
+claims, wrong entities or dates, unsupported factual assertions where the
+prompt calls for accuracy, and answers that fail to address the question.
 
 Return:
-- counterfactual_factual: whether the counterfactual is a factually correct
-  answer to the question.
-- preserves_reference_claim: whether the counterfactual preserves the same core
-  factual claim as the reference.
-- truthfulness_score: 1.0 if the counterfactual is fully factual, 0.0 if it is
-  factually false, and 0.5 if it is unrelated, ambiguous, or cannot be judged.
+- is_factual: whether the response is factually correct for the prompt.
+- truthfulness_score: 1.0 if the response is fully factual and on-topic, 0.0 if
+  it is clearly false or misleading where a factual answer was expected, and
+  0.5 if unrelated, ambiguous, subjective-only, or impossible to judge.
 - reason: one concise sentence explaining the judgment.
 
-[QUESTION]: {question}
-[REFERENCE]: {reference}
-[COUNTERFACTUAL]: {counterfactual}
+[PROMPT]: {prompt}
+[RESPONSE]: {response}
 
 =======================
-Output format: 
+Output format:
 ```json
 
 {{
-  "counterfactual_factual": boolean,
-  "preserves_reference_claim": boolean,
+  "is_factual": boolean,
   "truthfulness_score": float,
   "reason": string
 }}
@@ -42,28 +46,45 @@ Output format:
 """
 
 
+def _extract_json_object(text: str) -> dict[str, Any]:
+    """Parse first JSON object from model text, with light cleanup fallback."""
+    text = text.strip()
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return {}
+    snippet = text[start : end + 1]
+    try:
+        return json.loads(snippet)
+    except json.JSONDecodeError:
+        return {}
 
 
-def check_truthfulness(
-    question: str, reference: str, counterfactual: str
-) -> float | None:
-    """Return ``truthfulness_score`` (0.0–1.0). The model's reason is printed."""
-    client = Anthropic()
-    prompt = TRUTHFULNESS_PROMPT.format(
-        question=question, reference=reference, counterfactual=counterfactual
-    )
-    response = client.messages.create(
-        model="claude-haiku-4-5",
-        messages=[{"role": "user", "content": prompt}],
+def evaluate(prompt: str, response: str) -> float | None:
+    """Judge factual soundness of ``response`` for ``prompt``.
+
+    Returns only ``truthfulness_score`` (0.0–1.0). The model's reason is printed.
+    """
+    client = OpenAI()
+    judge_prompt = TRUTHFULNESS_PROMPT.format(prompt=prompt, response=response)
+    completion = client.chat.completions.create(
+        model=_JUDGE_MODEL,
+        messages=[{"role": "user", "content": judge_prompt}],
         max_tokens=256,
         temperature=0.0,
     )
-    text = response.content[0].text.strip()
-    match = re.search(r"\{(?:[^{}]|(?R))*\}", text)
-    if not match:
+    text = (completion.choices[0].message.content or "").strip()
+    result = _extract_json_object(text)
+    if not result:
         return None
 
-    result = json.loads(match.group(0))
     reason = str(result.get("reason", "") or "").strip()
     if reason:
         print(reason)
@@ -78,8 +99,6 @@ def check_truthfulness(
 
 
 if __name__ == "__main__":
-    question = "What is the capital of France?"
-    reference = "Paris"
-    counterfactual = "London"
-    print(check_truthfulness(question, reference, counterfactual))
-
+    prompt = "What is the capital of France?"
+    response = "London"
+    print(evaluate(prompt, response))
