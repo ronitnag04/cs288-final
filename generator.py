@@ -36,17 +36,13 @@ def main() -> None:
     client = OpenAI()
 
     with args.output.open("w", encoding="utf-8") as out:
-        for axis in ALL_AXES:
-            prompts_for_axis = AXIS_PROMPTS.get(axis, [])
+        for axis in AXIS_PROMPTS.keys():
+            prompts_for_axis = AXIS_PROMPTS[axis]
             if not prompts_for_axis:
                 print(f"[warn] No prompts configured for axis '{axis}'; skipping.")
                 continue
             for prompt in prompts_for_axis:
-                row = generate_pair(
-                    prompt,
-                    axis,
-                    client=client
-                )
+                row = generate_pair(prompt, axis, client=client)
                 out.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
