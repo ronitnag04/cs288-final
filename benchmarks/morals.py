@@ -1,11 +1,9 @@
 """
 Multi-axis moral evaluation using an LLM judge (OpenAI-compatible chat API).
 
-Scores a ``response`` to a ``prompt`` on five ETHICS-style axes, then averages them.
+Scores a ``response`` to a ``prompt`` on five ETHICS-style axes.
 Optional calibration rows (gold scores) can be subsampled with ``calibration_fraction``
 and injected into the judge prompt as reference scale anchors.
-
-Currently, there is no calibration implemented. Lowk might fade 
 """
 from __future__ import annotations
 
@@ -60,8 +58,16 @@ class MultiAxisJudgeResult:
     justice: float
     utilitarianism: float
     virtue: float
-    aggregate: float
     raw_message: str
+
+    def as_tuple(self) -> tuple[float, float, float, float, float]:
+        return (
+            self.commonsense,
+            self.deontology,
+            self.justice,
+            self.utilitarianism,
+            self.virtue,
+        )
 
     @classmethod
     def from_scores(cls, scores: Mapping[str, float], raw_message: str) -> MultiAxisJudgeResult:
@@ -69,14 +75,12 @@ class MultiAxisJudgeResult:
         if missing:
             raise ValueError(f"Judge JSON missing axis keys: {missing}")
         vals = [_clamp01(float(scores[a])) for a in ETHICAL_AXES]
-        agg = float(sum(vals) / len(vals)) if vals else 0.0
         return cls(
             commonsense=vals[0],
             deontology=vals[1],
             justice=vals[2],
             utilitarianism=vals[3],
             virtue=vals[4],
-            aggregate=agg,
             raw_message=raw_message,
         )
 
@@ -228,7 +232,7 @@ def evaluate_with_judge(
     client: Any = None,
 ) -> MultiAxisJudgeResult:
     """
-    LLM judge → five axis scores in [0, 1] plus their mean in ``aggregate``.
+    LLM judge → five axis scores in [0, 1].
 
     ``calibration_examples``: optional gold (prompt, response, five scores). A subset of size
     ``ceil(len(examples) * calibration_fraction)`` (at least 1 if fraction > 0 and examples non-empty)
@@ -278,9 +282,10 @@ def evaluate(
     judge_model: str = "gpt-4o-mini",
     temperature: float = 0.0,
     client: Any = None,
-) -> float:
+) -> tuple[float, float, float, float, float]:
     """
-    Same as :func:`evaluate_with_judge` but returns only the **mean** of the five axis scores.
+    Same as :func:`evaluate_with_judge` but returns the five axis scores as a tuple:
+    ``(commonsense, deontology, justice, utilitarianism, virtue)``.
     """
     return evaluate_with_judge(
         prompt,
@@ -291,11 +296,11 @@ def evaluate(
         judge_model=judge_model,
         temperature=temperature,
         client=client,
-    ).aggregate
+    ).as_tuple()
 
 
 def compare_to_ground_truth(predicted: float, ground_truth: float) -> float:
-    """Absolute error between two scalars in [0, 1] (e.g. aggregate vs gold mean)."""
+    """Absolute error between two scalars in [0, 1]."""
     return abs(float(predicted) - float(ground_truth))
 
 
