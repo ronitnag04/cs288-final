@@ -119,8 +119,8 @@ def main() -> None:
     p.add_argument(
         "--model",
         type=str,
-        default=None,
-        help="Override base model id (default: meta['model_name'] in the checkpoint).",
+        default="Qwen/Qwen3-4B-Instruct-2507",
+        help="Override base model id (default: Qwen/Qwen3-4B-Instruct-2507).",
     )
     p.add_argument("--prompt", type=str, default=None, help="User message; if omitted, read stdin.")
     p.add_argument(
@@ -140,7 +140,7 @@ def main() -> None:
         action="store_true",
         help="L2-normalize each layer vector before applying.",
     )
-    p.add_argument("--max-new-tokens", type=int, default=1024)
+    p.add_argument("--max-new-tokens", type=int, default=256)
     p.add_argument(
         "--dtype",
         choices=("bfloat16", "float16", "float32"),
@@ -174,8 +174,6 @@ def main() -> None:
 
     prompt_text = args.prompt
     if prompt_text is None:
-        prompt_text = Path("/dev/stdin").read_text().strip()
-    if not prompt_text:
         raise SystemExit("Empty prompt.")
 
     batch = {k: v.to(device) for k, v in format_prompt(tokenizer, prompt_text).items()}
