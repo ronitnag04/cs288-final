@@ -10,8 +10,10 @@ Uses forward hooks on decoder layer outputs so steering runs on every forward du
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Generator
 
@@ -108,6 +110,12 @@ def format_prompt(tokenizer: AutoTokenizer, user_text: str) -> dict[str, torch.T
     return tokenizer(text, return_tensors="pt", padding=False, truncation=True)
 
 
+def append_result_jsonl(path: Path, row: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Qwen3 dense LM inference with activation steering.")
     p.add_argument(
@@ -152,6 +160,12 @@ def main() -> None:
         action="store_true",
         help="Also print an unsteered generation for comparison.",
     )
+    p.add_argument(
+        "--results-jsonl",
+        type=Path,
+        default=Path(__file__).resolve().parent / "results.jsonl",
+        help="Append run records (prompt, baseline, steered) to this JSONL file.",
+    )
     args = p.parse_args()
 
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
@@ -185,10 +199,10 @@ def main() -> None:
         pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
     )
 
+    with torch.inference_mode():
+        out_base = model.generate(**batch, **gen_kwargs)
+    text_base = tokenizer.decode(out_base[0], skip_special_tokens=True)
     if args.compare_baseline:
-        with torch.inference_mode():
-            out_base = model.generate(**batch, **gen_kwargs)
-        text_base = tokenizer.decode(out_base[0], skip_special_tokens=True)
         print("--- baseline (no steering) ---")
         print(text_base)
         print()
@@ -204,6 +218,14 @@ def main() -> None:
             out = model.generate(**batch, **gen_kwargs)
 
     text = tokenizer.decode(out[0], skip_special_tokens=True)
+    record = {
+        "prompt": prompt_text,
+        "baseline_response": text_base,
+        "steered_response": text,
+        "steering_checkpoint": str(args.steering),
+        "direction": args.direction,
+    }
+    append_result_jsonl(args.results_jsonl, record)
     print("--- steered ---")
     print(text)
 
